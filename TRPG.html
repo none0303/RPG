@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="UI.css">
+  <title>First Battle</title>
+  <style>
+    body {
+      font-family: 'MS PGothic', sans-serif;
+      background-color: #000;
+      color: #0f0;
+      padding: 20px;
+    }
+    #battle-log {
+      border: 2px solid #0f0;
+      padding: 10px;
+      height: 250px;
+      overflow-y: auto;
+      background: #111;
+      margin-bottom: 20px;
+    }
+    .command-buttons button {
+      margin: 5px;
+      padding: 8px 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎉 修道士デスマッチ 🎉</h1>
+  <div id="battle-log"></div>
+  <div id="commands" class="command-buttons"></div>
+  <div id="character-images"></div>
+  <div id="enemy-image"></div>
+
+  <script>
+    const party = [
+      { name: "ルロイ1", hp: 100, maxHp: 100, attack: 25, specialImage: "images/ruroi.jpg" },
+      { name: "ルロイ2", hp: 120, maxHp: 120, attack: 20, specialImage: "images/ruroi.jpg" },
+      { name: "ルロイ3", hp: 80, maxHp: 80, attack: 30, specialImage: "images/ruroi.jpg" },
+      { name: "ルロイ4", hp: 90, maxHp: 90, attack: 15, specialImage: "images/ruroi.jpg" }
+    ];
+
+    const enemy = { name: "スライムキング", hp: 250, attack: 18 };
+    let currentPlayerIndex = 0;
+
+    function renderCharacterImages() {
+      const container = document.getElementById("character-images");
+      container.innerHTML = "";
+      party.forEach((p, index) => {
+        const wrapper = document.createElement("div");
+        wrapper.classList.add("character-wrapper");
+
+        const hpText = document.createElement("div");
+        hpText.classList.add("hp-text");
+        hpText.textContent = `${p.name} HP: ${p.hp}/${p.maxHp}`;
+
+        const img = document.createElement("img");
+        img.src = p.specialImage;
+        img.classList.add("character-img");
+
+        if (p.hp <= 0) {
+          img.classList.add("inactive");
+        } else if (index === currentPlayerIndex) {
+          img.classList.add("active");
+        }
+
+        wrapper.appendChild(hpText);
+        wrapper.appendChild(img);
+        container.appendChild(wrapper);
+      });
+    }
+
+    function renderEnemyImage() {
+      const enemyContainer = document.getElementById("enemy-image");
+      enemyContainer.innerHTML = "";
+      const img = document.createElement("img");
+      img.src = "images/enemy_slimeking.jpg";
+      img.classList.add("enemy-img");
+
+      if (enemy.hp <= 0) {
+        img.style.opacity = "0.3";
+        img.style.filter = "grayscale(100%)";
+      }
+
+      enemyContainer.appendChild(img);
+    }
+
+    function log(msg) {
+      const box = document.getElementById("battle-log");
+      const p = document.createElement("p");
+      p.innerHTML = msg;
+      box.appendChild(p);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function updateStatus() {
+      renderCharacterImages();
+      renderEnemyImage();
+    }
+
+    function showNextCommand() {
+      const commandsDiv = document.getElementById("commands");
+      commandsDiv.innerHTML = "";
+      renderCharacterImages();
+
+      if (currentPlayerIndex >= party.length) {
+        enemyTurn();
+        return;
+      }
+
+      const player = party[currentPlayerIndex];
+      if (player.hp <= 0) {
+        currentPlayerIndex++;
+        showNextCommand();
+        return;
+      }
+
+      const box = document.getElementById("battle-log");
+      box.innerHTML = "";
+      log(`▶️ ${player.name} のターン！`);
+
+      commandsDiv.innerHTML = `
+        <button onclick="attack()">たたかう</button>
+        <button onclick="heal()">かいふく</button>
+      `;
+    }
+
+    function attack() {
+      const player = party[currentPlayerIndex];
+      enemy.hp -= player.attack;
+      log(`${player.name} のこうげき！ ${enemy.name} に ${player.attack} ダメージ！`);
+
+      if (enemy.hp <= 0) {
+        log(`🎉 ${enemy.name} をたおした！！`);
+        endBattle();
+        return;
+      }
+
+      showNextButton();
+    }
+
+    function heal() {
+      const player = party[currentPlayerIndex];
+      const healAmount = Math.floor(Math.random() * 20) + 10;
+      player.hp = Math.min(player.maxHp, player.hp + healAmount);
+      log(`${player.name} は ${healAmount} HP をかいふくした！`);
+
+      showNextButton();
+    }
+
+    function showNextButton() {
+      const commandsDiv = document.getElementById("commands");
+      commandsDiv.innerHTML = `
+        <button onclick="nextTurn()">▶️ つぎへ</button>
+      `;
+    }
+
+    function nextTurn() {
+      currentPlayerIndex++;
+      showNextCommand();
+    }
+
+    function enemyTurn() {
+      const box = document.getElementById("battle-log");
+      box.innerHTML = "";
+      log(`😈 ${enemy.name} のターン！`);
+
+      for (let i = 0; i < 2; i++) {
+        const targets = party.filter(p => p.hp > 0);
+        if (targets.length === 0) break;
+        const target = targets[Math.floor(Math.random() * targets.length)];
+        const damage = enemy.attack;
+        target.hp -= damage;
+        log(`${enemy.name} のこうげき！ ${target.name} に ${damage} ダメージ！`);
+
+        if (target.hp <= 0) {
+          target.hp = 0;
+          log(`${target.name} は たおれてしまった…💀`);
+        }
+      }
+
+      currentPlayerIndex = 0;
+      updateStatus();
+
+      if (party.every(p => p.hp <= 0)) {
+        log(`💀 パーティはぜんめつした…`);
+        endBattle();
+        return;
+      }
+
+      showNextCommand();
+    }
+
+    function endBattle() {
+      document.getElementById("commands").innerHTML = "<p>バトルは終了しました。</p>";
+    }
+
+    // 初期化
+    updateStatus();
+    showNextCommand();
+  </script>
+</body>
+</html>
